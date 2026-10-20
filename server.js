@@ -41,7 +41,7 @@ const RATE_LIMIT = 10, RATE_WINDOW_MS = 60_000;
 const hits = new Map();
 function tooMany(req) {
   // X-Forwarded-For верим только за прокси хостинга (TRUST_PROXY=1): иначе его подделывает любой клиент.
-  const forwarded = process.env.TRUST_PROXY && req.headers['x-forwarded-for']?.split(',').pop().trim();
+  const forwarded = (process.env.TRUST_PROXY || process.env.VERCEL) && req.headers['x-forwarded-for']?.split(',').pop().trim();
   const ip = forwarded || req.socket.remoteAddress;
   const now = Date.now();
   if (hits.size > 10_000) hits.clear();
@@ -82,7 +82,10 @@ export const server = createServer(async (req, res) => {
   }
 });
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// Vercel вызывает default-экспорт как обработчик запроса и порт не слушает; локально и на Render слушаем сами.
+export default (req, res) => server.emit('request', req, res);
+
+if (!process.env.VERCEL && process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = process.env.PORT || 3000;
   server.listen(port, () => console.log(`Дежурный: http://localhost:${port}`));
 }
