@@ -25,6 +25,7 @@ async function readBody(req) {
 // Ответ идёт построчным JSON (NDJSON), чтобы интерфейс показывал стадии конвейера по мере выполнения.
 async function ask(res, question, previous) {
   if (!process.env.PROXYAPI_KEY) return json(res, 500, { error: 'На сервере не задан PROXYAPI_KEY. Добавьте его в .env и перезапустите.' });
+  if (budgetSpent()) return json(res, 429, { error: 'Лимит демо на этот час исчерпан. Попробуйте позже.' });
   res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache' });
   try {
     for await (const event of run(question, previous)) res.write(JSON.stringify(event) + '\n');
@@ -37,21 +38,26 @@ async function ask(res, question, previous) {
 
 // shortcut: лимит в памяти одного процесса, сбрасывается при рестарте; при нескольких инстансах нужен общий стор (Redis).
 const RATE_LIMIT = 10, RATE_WINDOW_MS = 60_000;
-const GLOBAL_LIMIT = 200, GLOBAL_WINDOW_MS = 3_600_000; // потолок расхода ключа, даже если лимит по IP обошли
 const hits = new Map();
-let globalHits = [];
 function tooMany(req) {
   // X-Forwarded-For верим только за прокси хостинга (TRUST_PROXY=1): иначе его подделывает любой клиент.
   const forwarded = process.env.TRUST_PROXY && req.headers['x-forwarded-for']?.split(',').pop().trim();
   const ip = forwarded || req.socket.remoteAddress;
   const now = Date.now();
   if (hits.size > 10_000) hits.clear();
-  globalHits = globalHits.filter((t) => now - t < GLOBAL_WINDOW_MS);
   const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
-  recent.push(now);
-  globalHits.push(now);
+  const blocked = recent.length >= RATE_LIMIT;
+  if (!blocked) recent.push(now); // отклонённые запросы не записываем, массив не растёт
   hits.set(ip, recent);
-  return recent.length > RATE_LIMIT || globalHits.length > GLOBAL_LIMIT;
+  return blocked;
+}
+
+// Потолок расхода ключа: считаются только запросы, дошедшие до платной модели. Окно фиксированное, это один счётчик.
+const GLOBAL_LIMIT = 200, GLOBAL_WINDOW_MS = 3_600_000;
+let budget = { start: 0, count: 0 };
+function budgetSpent() {
+  if (Date.now() - budget.start > GLOBAL_WINDOW_MS) budget = { start: Date.now(), count: 0 };
+  return budget.count >= GLOBAL_LIMIT || (budget.count++, false);
 }
 
 export const server = createServer(async (req, res) => {
