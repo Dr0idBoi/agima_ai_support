@@ -37,14 +37,21 @@ async function ask(res, question, previous) {
 
 // shortcut: лимит в памяти одного процесса, сбрасывается при рестарте; при нескольких инстансах нужен общий стор (Redis).
 const RATE_LIMIT = 10, RATE_WINDOW_MS = 60_000;
+const GLOBAL_LIMIT = 200, GLOBAL_WINDOW_MS = 3_600_000; // потолок расхода ключа, даже если лимит по IP обошли
 const hits = new Map();
+let globalHits = [];
 function tooMany(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',').pop().trim() || req.socket.remoteAddress; // последний адрес добавляет прокси хостинга
+  // X-Forwarded-For верим только за прокси хостинга (TRUST_PROXY=1): иначе его подделывает любой клиент.
+  const forwarded = process.env.TRUST_PROXY && req.headers['x-forwarded-for']?.split(',').pop().trim();
+  const ip = forwarded || req.socket.remoteAddress;
   const now = Date.now();
+  if (hits.size > 10_000) hits.clear();
+  globalHits = globalHits.filter((t) => now - t < GLOBAL_WINDOW_MS);
   const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
   recent.push(now);
+  globalHits.push(now);
   hits.set(ip, recent);
-  return recent.length > RATE_LIMIT;
+  return recent.length > RATE_LIMIT || globalHits.length > GLOBAL_LIMIT;
 }
 
 export const server = createServer(async (req, res) => {

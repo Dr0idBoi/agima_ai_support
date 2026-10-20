@@ -22,6 +22,8 @@ test('лимит запросов: 11-й за минуту получает 429'
   await new Promise((ok) => server.listen(0, ok));
   t.after(() => server.close());
   const { port } = server.address();
+  process.env.TRUST_PROXY = '1';
+  t.after(() => delete process.env.TRUST_PROXY);
   const status = async () => (await fetch(`http://localhost:${port}/api/ask`, { method: 'POST', headers: { 'x-forwarded-for': '9.9.9.9' }, body: '{}' })).status;
 
   for (let i = 0; i < 10; i++) assert.equal(await status(), 400);
