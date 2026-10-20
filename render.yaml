@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: duty-engineer
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PROXYAPI_KEY
+        sync: false

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Дежурный — разбор ошибок для команды</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="var(--accent)"/><path d="M5 19h7l3.5-9 5 16 3.5-7H31" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <h1>Дежурный</h1>
+          <p class="status"><i aria-hidden="true"></i>на связи</p>
+        </div>
+      </div>
+      <p class="tagline">Старший инженер для вашей команды: разберёт ошибку, подскажет команду, проверит код.</p>
+      <h2 id="log-title">Журнал</h2>
+      <ol id="history" class="history" aria-labelledby="log-title"></ol>
+      <p class="pipeline-note">Каждый вопрос проходит три стадии: разбор, ответ, проверка формата.</p>
+    </aside>
+
+    <main class="main">
+      <section class="compose">
+        <h2 class="prompt">Что сломалось?</h2>
+        <form id="form" class="ask">
+          <label for="question" class="visually-hidden">Ваш вопрос</label>
+          <textarea id="question" rows="5" maxlength="4000" placeholder="Вставьте ошибку, лог, кусок кода или задайте вопрос" required></textarea>
+          <div class="ask-bar">
+            <span class="hint">Ctrl + Enter, чтобы отправить</span>
+            <button id="submit" type="submit">Спросить AI</button>
+          </div>
+        </form>
+      </section>
+
+      <ol id="trace" class="trace" aria-label="Ход обработки" hidden></ol>
+      <section id="result" class="result" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
